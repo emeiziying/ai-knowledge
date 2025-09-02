@@ -7,6 +7,8 @@ from fastapi import FastAPI
 from .database import init_db, close_db
 from .vector_store import vector_store
 from .storage import storage
+from .processing.embeddings import initialize_default_embedding_service
+from .processing.vector_storage import initialize_vector_storage
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,20 @@ async def lifespan(app: FastAPI):
         # Initialize object storage
         await storage.connect()
         logger.info("Object storage connected")
+        
+        # Initialize embedding services
+        embedding_success = await initialize_default_embedding_service()
+        if embedding_success:
+            logger.info("Default embedding service initialized")
+        else:
+            logger.warning("Failed to initialize default embedding service")
+        
+        # Initialize vector storage service
+        vector_storage_success = await initialize_vector_storage()
+        if vector_storage_success:
+            logger.info("Vector storage service initialized")
+        else:
+            logger.warning("Failed to initialize vector storage service")
         
         logger.info("All services initialized successfully")
         

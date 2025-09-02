@@ -213,6 +213,34 @@ class DocumentProcessor:
         chunk_overlap: int = 200
     ) -> List[Dict[str, Any]]:
         """Create basic text chunks from processed content."""
+        # Import here to avoid circular imports
+        from .chunking import create_semantic_chunks, ChunkingConfig, ChunkingStrategy
+        
+        try:
+            # Use the new semantic chunking if available
+            config = ChunkingConfig(
+                strategy=ChunkingStrategy.HYBRID,
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+                min_chunk_size=100,
+                max_chunk_size=chunk_size * 2,
+                preserve_sentences=True,
+                preserve_paragraphs=True,
+                respect_structure=True
+            )
+            
+            chunks = create_semantic_chunks(content, structure_metadata, config)
+            
+            if chunks:
+                logger.info(f"Created {len(chunks)} semantic chunks from content")
+                return chunks
+            else:
+                logger.warning("Semantic chunking returned no chunks, falling back to basic chunking")
+        
+        except Exception as e:
+            logger.warning(f"Semantic chunking failed, falling back to basic chunking: {e}")
+        
+        # Fallback to basic chunking
         chunks = []
         
         # Simple chunking by character count with overlap
@@ -267,7 +295,7 @@ class DocumentProcessor:
             if start >= end:
                 break
         
-        logger.info(f"Created {len(chunks)} chunks from content")
+        logger.info(f"Created {len(chunks)} basic chunks from content")
         return chunks
     
     def _check_structure_markers(self, chunk_content: str, structure_metadata: Dict[str, Any]) -> Dict[str, bool]:

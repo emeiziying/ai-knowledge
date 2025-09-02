@@ -13,6 +13,13 @@ from ..models import User
 from .integration import processing_integration
 from .parsers import DocumentParserFactory
 from . import get_supported_formats
+from .tasks import (
+    submit_document_for_vectorization,
+    submit_document_for_reprocessing,
+    get_task_status,
+    cancel_task
+)
+from .vector_storage import vector_storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -214,6 +221,203 @@ async def get_document_chunks(
     except Exception as e:
         logger.error(f"Failed to get document chunks for {document_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get document chunks: {str(e)}")
+
+
+@router.post("/documents/{document_id}/vectorize")
+async def vectorize_document(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Submit a document for vectorization processing using async task queue.
+    
+    Args:
+        document_id: ID of the document to vectorize
+        db: Database session
+        current_user: Current authenticated user
+        
+    Returns:
+        Task submission result
+    """
+    try:
+        # Submit document for vectorization
+        task_id = submit_document_for_vectorization(
+            str(document_id), 
+            str(current_user.id)
+        )
+        
+        return {
+            "message": "Document submitted for vectorization",
+            "document_id": str(document_id),
+            "task_id": task_id,
+            "status": "submitted"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error submitting document {document_id} for vectorization: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to submit document for vectorization: {str(e)}"
+        )
+
+
+@router.post("/documents/{document_id}/revectorize")
+async def revectorize_document(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Submit a document for re-vectorization using async task queue.
+    
+    Args:
+        document_id: ID of the document to re-vectorize
+        db: Database session
+        current_user: Current authenticated user
+        
+    Returns:
+        Task submission result
+    """
+    try:
+        # Submit document for re-vectorization
+        task_id = submit_document_for_reprocessing(
+            str(document_id), 
+            str(current_user.id)
+        )
+        
+        return {
+            "message": "Document submitted for re-vectorization",
+            "document_id": str(document_id),
+            "task_id": task_id,
+            "status": "submitted"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error submitting document {document_id} for re-vectorization: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to submit document for re-vectorization: {str(e)}"
+        )
+
+
+@router.get("/tasks/{task_id}/status")
+async def get_vectorization_task_status(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get status of a vectorization task.
+    
+    Args:
+        task_id: ID of the task
+        current_user: Current authenticated user
+        
+    Returns:
+        Task status information
+    """
+    try:
+        task_status = get_task_status(task_id)
+        return task_status
+        
+    except Exception as e:
+        logger.error(f"Error getting task status for {task_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get task status: {str(e)}"
+        )
+
+
+@router.delete("/tasks/{task_id}")
+async def cancel_vectorization_task(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Cancel a vectorization task.
+    
+    Args:
+        task_id: ID of the task to cancel
+        current_user: Current authenticated user
+        
+    Returns:
+        Cancellation result
+    """
+    try:
+        success = cancel_task(task_id)
+        
+        if success:
+            return {
+                "message": "Task cancelled successfully",
+                "task_id": task_id,
+                "status": "cancelled"
+            }
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Failed to cancel task"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error cancelling task {task_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to cancel task: {str(e)}"
+        )
+
+
+@router.get("/documents/{document_id}/vectors/stats")
+async def get_document_vector_stats(
+    document_id: UUID,
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get vector statistics for a document.
+    
+    Args:
+        document_id: ID of the document
+        current_user: Current authenticated user
+        
+    Returns:
+        Vector statistics
+    """
+    try:
+        stats = await vector_storage_service.get_document_vector_stats(str(document_id))
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error getting vector stats for {document_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get vector statistics: {str(e)}"
+        )
+
+
+@router.get("/vectors/collection/stats")
+async def get_vector_collection_stats(
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get statistics about the vector collection.
+    
+    Args:
+        current_user: Current authenticated user
+        
+    Returns:
+        Collection statistics
+    """
+    try:
+        stats = await vector_storage_service.get_collection_stats()
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error getting collection stats: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get collection statistics: {str(e)}"
+        )
 
 
 @router.get("/health")
