@@ -23,6 +23,7 @@ from .auth import get_router
 from .documents import get_router as get_documents_router
 from .processing.router import router as processing_router
 from .ai.router import router as ai_router
+from .chat.router import router as chat_router
 
 # Import startup functions
 from .startup import lifespan
@@ -68,6 +69,7 @@ def create_application() -> FastAPI:
     app.include_router(documents_router, prefix="/api/v1")
     app.include_router(processing_router)
     app.include_router(ai_router, prefix="/api/v1")
+    app.include_router(chat_router)
     
     # Root endpoint
     @app.get("/", tags=["root"])

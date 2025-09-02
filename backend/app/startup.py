@@ -60,6 +60,18 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning(f"Failed to initialize AI service manager: {e}")
         
+        # Initialize RAG service
+        try:
+            from .chat.rag_service import initialize_rag_service
+            if hasattr(app.state, 'ai_service_manager'):
+                rag_service = await initialize_rag_service(app.state.ai_service_manager)
+                app.state.rag_service = rag_service
+                logger.info("RAG service initialized successfully")
+            else:
+                logger.warning("Cannot initialize RAG service without AI service manager")
+        except Exception as e:
+            logger.warning(f"Failed to initialize RAG service: {e}")
+        
         logger.info("All services initialized successfully")
         
     except Exception as e:
@@ -72,6 +84,11 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down AI Knowledge Base application...")
     
     try:
+        # Close RAG service
+        if hasattr(app.state, 'rag_service'):
+            await app.state.rag_service.close()
+            logger.info("RAG service closed")
+        
         # Stop AI service health monitoring
         if hasattr(app.state, 'ai_service_manager'):
             await app.state.ai_service_manager.stop_health_monitoring()
