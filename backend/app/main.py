@@ -1,83 +1,76 @@
-import logging
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from .startup import lifespan, check_services_health
+"""Main FastAPI application with comprehensive middleware setup."""
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+import logging
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
+
+# Import middleware
+from .middleware.cors import add_cors_middleware
+from .middleware.logging import LoggingMiddleware, setup_logging
+from .middleware.error_handler import (
+    APIError,
+    api_error_handler,
+    http_exception_handler,
+    validation_exception_handler,
+    general_exception_handler
+)
+from .middleware.security import add_security_middleware, add_security_headers
+
+# Import routers
+from .routers.health import router as health_router
+
+# Import startup functions
+from .startup import lifespan
+from .config import settings
+
+# Setup logging first
+setup_logging()
 logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="AI Knowledge Base API",
-    description="Backend API for AI Knowledge Base application",
-    version="1.0.0",
-    lifespan=lifespan
-)
 
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Frontend URL
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.get("/")
-async def root():
-    return {"message": "AI Knowledge Base API"}
-
-@app.get("/health")
-async def health_check():
-    """Basic health check endpoint."""
-    return {"status": "healthy"}
-
-@app.get("/api/v1/health")
-async def detailed_health_check():
-    """Detailed health check that verifies all services."""
-    try:
-        services_healthy = await check_services_health()
-        if services_healthy:
-            return {
-                "status": "healthy",
-                "services": {
-                    "database": "connected",
-                    "vector_store": "connected", 
-                    "object_storage": "connected"
-                }
-            }
-        else:
-            return {
-                "status": "unhealthy",
-                "message": "One or more services are not available"
-            }
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
+def create_application() -> FastAPI:
+    """Create and configure the FastAPI application."""
+    
+    # Create FastAPI app
+    app = FastAPI(
+        title="AI Knowledge Base API",
+        description="Backend API for AI Knowledge Base application with RAG capabilities",
+        version="1.0.0",
+        docs_url="/docs" if settings.debug else None,
+        redoc_url="/redoc" if settings.debug else None,
+        lifespan=lifespan
+    )
+    
+    # Add middleware (order matters!)
+    add_security_middleware(app)
+    add_cors_middleware(app)
+    add_security_headers(app)
+    app.add_middleware(LoggingMiddleware)
+    
+    # Add exception handlers
+    app.add_exception_handler(APIError, api_error_handler)
+    app.add_exception_handler(HTTPException, http_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(Exception, general_exception_handler)
+    
+    # Include routers
+    app.include_router(health_router)
+    
+    # Root endpoint
+    @app.get("/", tags=["root"])
+    async def root():
+        """Root endpoint with basic API information."""
         return {
-            "status": "unhealthy",
-            "error": str(e)
+            "message": "AI Knowledge Base API",
+            "version": "1.0.0",
+            "docs_url": "/docs" if settings.debug else None,
+            "health_check": "/api/v1/health"
         }
+    
+    logger.info("FastAPI application created and configured")
+    return app
 
-@app.get("/api/v1/status")
-async def system_status():
-    """Get system status and configuration."""
-    from .config import settings
-    return {
-        "application": "AI Knowledge Base",
-        "version": "1.0.0",
-        "environment": "development",
-        "services": {
-            "database": {
-                "type": "PostgreSQL",
-                "host": settings.database_url.split("@")[1].split("/")[0] if "@" in settings.database_url else "localhost"
-            },
-            "vector_store": {
-                "type": "Qdrant",
-                "host": f"{settings.qdrant_host}:{settings.qdrant_port}"
-            },
-            "object_storage": {
-                "type": "MinIO",
-                "endpoint": settings.minio_endpoint
-            }
-        }
-    }
+
+# Create the application instance
+app = create_application()
