@@ -6,7 +6,9 @@ import io
 from typing import Optional, BinaryIO
 from minio import Minio
 from minio.error import S3Error
-from .config import settings
+from .config import get_settings
+
+settings = get_settings()
 
 logger = logging.getLogger(__name__)
 

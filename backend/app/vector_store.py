@@ -6,7 +6,9 @@ from typing import List, Dict, Any, Optional
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.models import Distance, VectorParams, PointStruct
-from .config import settings
+from .config import get_settings
+
+settings = get_settings()
 
 logger = logging.getLogger(__name__)
 

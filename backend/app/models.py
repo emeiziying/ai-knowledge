@@ -53,7 +53,7 @@ class DocumentChunk(Base):
     document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
     chunk_index = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
-    metadata = Column(JSON)
+    metadata_json = Column("metadata", JSON)
     vector_id = Column(String(100))  # Reference to vector in Qdrant
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -84,7 +84,7 @@ class Message(Base):
     conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=False)
     role = Column(String(20), nullable=False)  # 'user' or 'assistant'
     content = Column(Text, nullable=False)
-    metadata = Column(JSON)  # Store sources, references, etc.
+    metadata_json = Column("metadata", JSON)  # Store sources, references, etc.
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships

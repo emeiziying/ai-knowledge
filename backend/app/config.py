@@ -12,9 +12,9 @@ class Settings(BaseSettings):
     port: int = 8000
     
     # Security
-    secret_key: str = "your-secret-key-change-in-production"
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    SECRET_KEY: str = "your-secret-key-change-in-production"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # CORS
     frontend_url: Optional[str] = None
@@ -59,4 +59,6 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = False
 
-settings = Settings()
+def get_settings() -> Settings:
+    """Get application settings."""
+    return Settings()

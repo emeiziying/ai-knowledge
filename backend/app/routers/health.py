@@ -4,7 +4,9 @@ import logging
 from typing import Dict, Any
 from fastapi import APIRouter, HTTPException, Depends
 from ..startup import check_services_health
-from ..config import settings
+from ..config import get_settings
+
+settings = get_settings()
 
 logger = logging.getLogger(__name__)
 

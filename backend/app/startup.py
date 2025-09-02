@@ -100,7 +100,8 @@ async def check_services_health():
     # Check Redis
     try:
         import redis.asyncio as redis
-        from .config import settings
+        from .config import get_settings
+        settings = get_settings()
         redis_client = redis.from_url(settings.redis_url)
         await redis_client.ping()
         await redis_client.close()

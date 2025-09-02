@@ -19,10 +19,13 @@ from .middleware.security import add_security_middleware, add_security_headers
 
 # Import routers
 from .routers.health import router as health_router
+from .auth import get_router
 
 # Import startup functions
 from .startup import lifespan
-from .config import settings
+from .config import get_settings
+
+settings = get_settings()
 
 # Setup logging first
 setup_logging()
@@ -56,6 +59,8 @@ def create_application() -> FastAPI:
     
     # Include routers
     app.include_router(health_router)
+    auth_router = get_router()
+    app.include_router(auth_router, prefix="/api/v1")
     
     # Root endpoint
     @app.get("/", tags=["root"])
