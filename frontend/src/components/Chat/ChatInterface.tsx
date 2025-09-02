@@ -20,8 +20,10 @@ import {
   FileTextOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { Conversation, Message } from '../../types/api';
 import { useChatStore } from '../../stores/chatStore';
+import { useDocumentStore } from '../../stores/documentStore';
 import './ChatInterface.css';
 
 const { TextArea } = Input;
@@ -36,6 +38,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   conversation, 
   isMobile = false 
 }) => {
+  const navigate = useNavigate();
   const {
     messages,
     isSending,
@@ -46,6 +49,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     clearCurrentConversation,
     clearError,
   } = useChatStore();
+  
+  const { } = useDocumentStore();
 
   const [inputMessage, setInputMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -84,7 +89,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -109,6 +114,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     });
   };
 
+  const handleSourceClick = async (documentId: string, documentName: string) => {
+    try {
+      // Navigate to documents page and highlight the specific document
+      navigate(`/documents?highlight=${documentId}`);
+      message.success(`正在跳转到文档：${documentName}`);
+    } catch (error) {
+      message.error('跳转失败，请稍后重试');
+    }
+  };
+
   const renderMessageSources = (metadata?: Message['metadata']) => {
     if (!metadata?.sources || metadata.sources.length === 0) {
       return null;
@@ -123,12 +138,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           {metadata.sources.map((source, index) => (
             <Tooltip 
               key={index}
-              title={`文档：${source.document_name} | 相关度：${(source.relevance_score * 100).toFixed(1)}%`}
+              title={`点击查看文档：${source.document_name} | 相关度：${(source.relevance_score * 100).toFixed(1)}%`}
             >
               <Tag 
                 icon={<FileTextOutlined />}
-                className="source-tag"
+                className="source-tag clickable"
                 color="blue"
+                onClick={() => handleSourceClick(source.document_id, source.document_name)}
               >
                 {source.document_name}
               </Tag>
@@ -276,7 +292,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             ref={textAreaRef}
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             placeholder="输入您的问题..."
             autoSize={{ minRows: 1, maxRows: 4 }}
             disabled={isSending}

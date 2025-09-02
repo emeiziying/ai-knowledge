@@ -1,0 +1,260 @@
+/* Documents Page Styles */
+.documents-page {
+  padding: 24px;
+}
+
+.documents-header {
+  margin-bottom: 16px;
+}
+
+.documents-search-row {
+  margin-bottom: 16px;
+}
+
+.documents-filters {
+  margin-bottom: 16px;
+}
+
+/* Highlighted document row */
+.highlighted-row {
+  background-color: #fff7e6 !important;
+  border: 2px solid #ffa940;
+  animation: highlightPulse 2s ease-in-out;
+}
+
+.highlighted-row:hover {
+  background-color: #fff7e6 !important;
+}
+
+@keyframes highlightPulse {
+  0% {
+    background-color: #fff7e6;
+    border-color: #ffa940;
+  }
+  50% {
+    background-color: #ffe7ba;
+    border-color: #ff7a00;
+  }
+  100% {
+    background-color: #fff7e6;
+    border-color: #ffa940;
+  }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 767px) {
+  .documents-page {
+    padding: 16px;
+  }
+
+  .documents-header .ant-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .documents-header .ant-col:first-child {
+    text-align: center;
+  }
+
+  .documents-search-row .ant-col:last-child {
+    margin-top: 8px;
+  }
+
+  /* Table responsive adjustments */
+  .ant-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .ant-table-thead > tr > th {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+
+  .ant-table-tbody > tr > td {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+
+  /* Hide less important columns on mobile */
+  .ant-table-thead > tr > th:nth-child(3),
+  .ant-table-tbody > tr > td:nth-child(3) {
+    display: none;
+  }
+
+  /* Adjust action buttons for mobile */
+  .ant-table-tbody .ant-space {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ant-table-tbody .ant-btn {
+    min-height: 28px;
+    min-width: 28px;
+    padding: 4px;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .documents-page {
+    padding: 12px;
+  }
+
+  .documents-header h2 {
+    font-size: 18px;
+  }
+
+  .documents-search-row .ant-input-search {
+    font-size: 14px;
+  }
+
+  /* Further simplify table on very small screens */
+  .ant-table-thead > tr > th:nth-child(2),
+  .ant-table-tbody > tr > td:nth-child(2) {
+    display: none;
+  }
+
+  .ant-table-tbody .ant-space {
+    flex-direction: row;
+    gap: 2px;
+  }
+
+  .ant-table-tbody .ant-btn {
+    min-height: 24px;
+    min-width: 24px;
+    padding: 2px;
+  }
+}
+
+/* Upload modal responsive */
+@media (max-width: 767px) {
+  .ant-modal {
+    margin: 0;
+    max-width: 100vw;
+    top: 0;
+    padding-bottom: 0;
+  }
+
+  .ant-modal .ant-modal-content {
+    border-radius: 0;
+  }
+
+  .ant-modal-body {
+    padding: 16px;
+  }
+}
+
+/* Document details modal responsive */
+@media (max-width: 767px) {
+  .ant-modal-wrap .ant-modal {
+    width: 100vw !important;
+    max-width: 100vw;
+    margin: 0;
+    top: 0;
+    height: 100vh;
+  }
+
+  .ant-modal-content {
+    height: 100vh;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ant-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+}
+
+/* Loading states */
+.documents-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+/* Empty state */
+.documents-empty {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.documents-empty .ant-empty-description {
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+/* Filter panel */
+.documents-filters-panel {
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.documents-filters-panel .ant-form-item {
+  margin-bottom: 12px;
+}
+
+.documents-filters-panel .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Status indicators */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-indicator .ant-progress {
+  margin-top: 4px;
+}
+
+/* File type icons */
+.file-icon {
+  font-size: 16px;
+  margin-right: 8px;
+}
+
+/* Action buttons */
+.action-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.action-buttons .ant-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Tooltips */
+.ant-tooltip-inner {
+  font-size: 12px;
+}
+
+/* Pagination */
+.ant-pagination {
+  margin-top: 16px;
+  text-align: center;
+}
+
+@media (max-width: 767px) {
+  .ant-pagination {
+    margin-top: 12px;
+  }
+
+  .ant-pagination-options {
+    display: none;
+  }
+
+  .ant-pagination-jump-prev,
+  .ant-pagination-jump-next {
+    display: none;
+  }
+}

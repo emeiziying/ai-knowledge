@@ -1,15 +1,17 @@
-import React from 'react';
-import { Layout, Menu, Avatar, Dropdown, Space, Typography, message } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Layout, Menu, Avatar, Dropdown, Space, Typography, message, Button, Drawer } from 'antd';
 import { 
   FileTextOutlined, 
   MessageOutlined, 
   SettingOutlined, 
   UserOutlined,
   LogoutOutlined,
-  DashboardOutlined
+  DashboardOutlined,
+  MenuOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import './MainLayout.css';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -22,6 +24,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [drawerVisible, setDrawerVisible] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setDrawerVisible(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const menuItems = [
     {
@@ -62,6 +78,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   const handleMenuClick = ({ key }: { key: string }) => {
     navigate(key);
+    if (isMobile) {
+      setDrawerVisible(false);
+    }
   };
 
   const handleUserMenuClick = async ({ key }: { key: string }) => {
@@ -79,44 +98,84 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
   };
 
+
+
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider
-        theme="light"
-        width={250}
-        style={{
-          boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
-        }}
-      >
-        <div style={{ 
-          padding: '16px', 
-          borderBottom: '1px solid #f0f0f0',
-          textAlign: 'center'
-        }}>
-          <Title level={4} style={{ margin: 0, color: '#1890ff' }}>
-            AI 知识库
-          </Title>
-        </div>
-        <Menu
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          items={menuItems}
-          onClick={handleMenuClick}
-          style={{ border: 'none', paddingTop: '16px' }}
-        />
-      </Sider>
-      
-      <Layout>
-        <Header 
-          style={{ 
-            background: '#fff', 
-            padding: '0 24px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center'
+    <Layout className="main-layout">
+      {/* Desktop Sidebar */}
+      {!isMobile && (
+        <Sider
+          theme="light"
+          width={250}
+          style={{
+            boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
           }}
         >
+          <div className="sidebar-content">
+            <div className="sidebar-header">
+              <Title className="sidebar-title" level={4}>
+                AI 知识库
+              </Title>
+            </div>
+            <Menu
+              className="sidebar-menu"
+              mode="inline"
+              selectedKeys={[location.pathname]}
+              items={menuItems}
+              onClick={handleMenuClick}
+            />
+          </div>
+        </Sider>
+      )}
+
+      {/* Mobile Drawer */}
+      {isMobile && (
+        <Drawer
+          className="mobile-drawer"
+          title={null}
+          placement="left"
+          onClose={() => setDrawerVisible(false)}
+          open={drawerVisible}
+          bodyStyle={{ padding: 0 }}
+          width={250}
+        >
+          <div className="sidebar-content">
+            <div className="sidebar-header">
+              <Title className="sidebar-title" level={4}>
+                AI 知识库
+              </Title>
+            </div>
+            <Menu
+              className="sidebar-menu"
+              mode="inline"
+              selectedKeys={[location.pathname]}
+              items={menuItems}
+              onClick={handleMenuClick}
+            />
+          </div>
+        </Drawer>
+      )}
+      
+      <Layout>
+        <Header className={`main-header ${isMobile ? 'mobile' : 'desktop'}`}>
+          {/* Mobile menu button */}
+          {isMobile && (
+            <Button
+              className="mobile-menu-btn"
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => setDrawerVisible(true)}
+            />
+          )}
+
+          {/* Mobile title */}
+          {isMobile && (
+            <Title className="mobile-title" level={5}>
+              AI 知识库
+            </Title>
+          )}
+
+          {/* User menu */}
           <Dropdown
             menu={{
               items: userMenuItems,
@@ -124,22 +183,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             }}
             placement="bottomRight"
           >
-            <Space style={{ cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} />
-              <span>{user?.username || '用户'}</span>
-            </Space>
+            <div className="user-dropdown">
+              <Space>
+                <Avatar icon={<UserOutlined />} size={isMobile ? 'small' : 'default'} />
+                {!isMobile && <span>{user?.username || '用户'}</span>}
+              </Space>
+            </div>
           </Dropdown>
         </Header>
         
-        <Content 
-          style={{ 
-            margin: '24px',
-            padding: '24px',
-            background: '#fff',
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }}
-        >
+        <Content className={`main-content ${isMobile ? 'mobile' : 'desktop'}`}>
           {children}
         </Content>
       </Layout>

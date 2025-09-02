@@ -33,6 +33,7 @@ interface DocumentListProps {
     limit: number;
     pages: number;
   };
+  highlightedDocumentId?: string | null;
   onPageChange: (page: number, pageSize?: number) => void;
   onViewDetails: (documentId: string) => void;
   onRefresh: () => void;
@@ -41,6 +42,7 @@ interface DocumentListProps {
 const DocumentList: React.FC<DocumentListProps> = ({
   documents,
   pagination,
+  highlightedDocumentId,
   onPageChange,
   onViewDetails,
   onRefresh
@@ -183,6 +185,9 @@ const DocumentList: React.FC<DocumentListProps> = ({
       columns={columns}
       dataSource={documents}
       rowKey="id"
+      rowClassName={(record) => 
+        highlightedDocumentId === record.id ? 'highlighted-row' : ''
+      }
       pagination={{
         current: pagination.page,
         total: pagination.total,

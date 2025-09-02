@@ -17,16 +17,19 @@ import {
   ReloadOutlined,
   FilterOutlined 
 } from '@ant-design/icons';
+import { useSearchParams } from 'react-router-dom';
 import { useDocumentStore } from '../../stores/documentStore';
 import DocumentList from '../../components/Documents/DocumentList';
 import FileUpload from '../../components/Documents/FileUpload';
 import DocumentDetails from '../../components/Documents/DocumentDetails';
 import DocumentFilters from '../../components/Documents/DocumentFilters';
+import './Documents.css';
 
 const { Title } = Typography;
 const { Search } = Input;
 
 const Documents: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const {
     documents,
     currentDocument,
@@ -36,6 +39,7 @@ const Documents: React.FC = () => {
     searchQuery,
     fetchDocuments,
     searchDocuments,
+    getDocument,
     setSearchQuery,
     clearError,
     clearCurrentDocument
@@ -44,6 +48,7 @@ const Documents: React.FC = () => {
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [filtersVisible, setFiltersVisible] = useState(false);
+  const [highlightedDocumentId, setHighlightedDocumentId] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     status: '',
     fileType: '',
@@ -52,7 +57,17 @@ const Documents: React.FC = () => {
 
   useEffect(() => {
     fetchDocuments();
-  }, []);
+    
+    // Check for highlight parameter from chat source navigation
+    const highlightId = searchParams.get('highlight');
+    if (highlightId) {
+      setHighlightedDocumentId(highlightId);
+      // Auto-open the highlighted document details
+      setTimeout(() => {
+        handleViewDetails(highlightId);
+      }, 500);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (error) {
@@ -84,11 +99,17 @@ const Documents: React.FC = () => {
     handleRefresh();
   };
 
-  const handleViewDetails = (documentId: string) => {
-    const document = documents.find(doc => doc.id === documentId);
-    if (document) {
-      useDocumentStore.getState().currentDocument = document;
+  const handleViewDetails = async (documentId: string) => {
+    try {
+      await getDocument(documentId);
       setDetailsModalVisible(true);
+      
+      // Clear highlight after viewing
+      if (highlightedDocumentId === documentId) {
+        setHighlightedDocumentId(null);
+      }
+    } catch (error) {
+      message.error('无法加载文档详情');
     }
   };
 
@@ -109,16 +130,16 @@ const Documents: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div className="documents-page">
       <Row gutter={[16, 16]}>
         <Col span={24}>
           <Card>
-            <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
-              <Col>
+            <Row justify="space-between" align="middle" className="documents-header">
+              <Col xs={24} sm={12}>
                 <Title level={2} style={{ margin: 0 }}>文档管理</Title>
               </Col>
-              <Col>
-                <Space>
+              <Col xs={24} sm={12} style={{ textAlign: 'right' }}>
+                <Space wrap>
                   <Button 
                     type="primary" 
                     icon={<UploadOutlined />}
@@ -137,7 +158,7 @@ const Documents: React.FC = () => {
               </Col>
             </Row>
 
-            <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+            <Row gutter={[16, 16]} className="documents-search-row">
               <Col xs={24} sm={16} md={18}>
                 <Search
                   placeholder="搜索文档名称或内容..."
@@ -160,12 +181,14 @@ const Documents: React.FC = () => {
             </Row>
 
             {filtersVisible && (
-              <Row style={{ marginBottom: 16 }}>
+              <Row className="documents-filters">
                 <Col span={24}>
-                  <DocumentFilters
-                    filters={filters}
-                    onApplyFilters={handleApplyFilters}
-                  />
+                  <div className="documents-filters-panel">
+                    <DocumentFilters
+                      filters={filters}
+                      onApplyFilters={handleApplyFilters}
+                    />
+                  </div>
                 </Col>
               </Row>
             )}
@@ -174,6 +197,7 @@ const Documents: React.FC = () => {
               <DocumentList
                 documents={documents}
                 pagination={pagination}
+                highlightedDocumentId={highlightedDocumentId}
                 onPageChange={handlePageChange}
                 onViewDetails={handleViewDetails}
                 onRefresh={handleRefresh}

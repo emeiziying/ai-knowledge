@@ -8,16 +8,21 @@ import {
   Typography,
   List,
   Card,
-  message
+  message,
+  Spin,
+  Badge
 } from 'antd';
 import {
   InboxOutlined,
   DeleteOutlined,
   CheckCircleOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  LoadingOutlined,
+  FileTextOutlined
 } from '@ant-design/icons';
 import { useDocumentStore } from '../../stores/documentStore';
 import { formatFileSize } from '../../utils';
+import './FileUpload.css';
 
 const { Dragger } = Upload;
 const { Text, Title } = Typography;
@@ -98,14 +103,26 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
       setFileList(prev => 
         prev.map(f => 
           f.uid === uploadFile.uid 
-            ? { ...f, status: 'uploading' as const }
+            ? { ...f, status: 'uploading' as const, progress: 0 }
             : f
         )
       );
 
+      // Simulate progress updates during upload
+      const progressInterval = setInterval(() => {
+        setFileList(prev => 
+          prev.map(f => 
+            f.uid === uploadFile.uid && f.status === 'uploading'
+              ? { ...f, progress: Math.min(f.progress + Math.random() * 20, 90) }
+              : f
+          )
+        );
+      }, 200);
+
       await uploadDocument(uploadFile.file);
 
-      // Update file status to done
+      // Clear progress interval and set to complete
+      clearInterval(progressInterval);
       setFileList(prev => 
         prev.map(f => 
           f.uid === uploadFile.uid 
@@ -163,13 +180,27 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
 
   const getStatusIcon = (status: UploadFile['status']) => {
     switch (status) {
+      case 'uploading':
+        return <Spin indicator={<LoadingOutlined style={{ fontSize: 16, color: '#1890ff' }} spin />} />;
       case 'done':
-        return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
+        return <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 16 }} />;
       case 'error':
-        return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
+        return <ExclamationCircleOutlined style={{ color: '#ff4d4f', fontSize: 16 }} />;
       default:
-        return null;
+        return <FileTextOutlined style={{ color: '#8c8c8c', fontSize: 16 }} />;
     }
+  };
+
+  const getUploadingCount = () => {
+    return fileList.filter(f => f.status === 'uploading').length;
+  };
+
+  const getCompletedCount = () => {
+    return fileList.filter(f => f.status === 'done').length;
+  };
+
+  const getErrorCount = () => {
+    return fileList.filter(f => f.status === 'error').length;
   };
 
   const uploadProps = {
@@ -183,7 +214,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
   };
 
   return (
-    <div>
+    <div className="file-upload-container">
       <Space direction="vertical" style={{ width: '100%' }} size="large">
         {/* Upload Area */}
         <Card>
@@ -194,11 +225,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
           >
             <Dragger
               {...uploadProps}
-              className={dragOver ? 'drag-over' : ''}
-              style={{
-                backgroundColor: dragOver ? '#f0f9ff' : undefined,
-                borderColor: dragOver ? '#1890ff' : undefined,
-              }}
+              className={`upload-dragger ${dragOver ? 'drag-over' : ''}`}
             >
             <p className="ant-upload-drag-icon">
               <InboxOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
@@ -217,7 +244,29 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
 
         {/* File List */}
         {fileList.length > 0 && (
-          <Card title="上传列表">
+          <Card 
+            className="file-list-card"
+            title={
+              <Space>
+                <span>上传列表</span>
+                {getUploadingCount() > 0 && (
+                  <Badge count={getUploadingCount()} style={{ backgroundColor: '#1890ff' }}>
+                    <span className="status-badge uploading">上传中</span>
+                  </Badge>
+                )}
+                {getCompletedCount() > 0 && (
+                  <Badge count={getCompletedCount()} style={{ backgroundColor: '#52c41a' }}>
+                    <span className="status-badge completed">已完成</span>
+                  </Badge>
+                )}
+                {getErrorCount() > 0 && (
+                  <Badge count={getErrorCount()} style={{ backgroundColor: '#ff4d4f' }}>
+                    <span className="status-badge error">失败</span>
+                  </Badge>
+                )}
+              </Space>
+            }
+          >
             <List
               dataSource={fileList}
               renderItem={(item) => (
@@ -229,31 +278,44 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
                       icon={<DeleteOutlined />}
                       onClick={() => handleRemoveFile(item.uid)}
                       disabled={item.status === 'uploading'}
+                      size="small"
                     />
                   ]}
+                  className={`file-item ${
+                    item.status === 'uploading' ? 'uploading' :
+                    item.status === 'error' ? 'error' :
+                    item.status === 'done' ? 'completed' : ''
+                  }`}
                 >
                   <List.Item.Meta
                     avatar={getStatusIcon(item.status)}
                     title={
                       <Space>
-                        <Text>{item.name}</Text>
+                        <Text strong={item.status === 'uploading'}>{item.name}</Text>
                         <Text type="secondary">({formatFileSize(item.size)})</Text>
                       </Space>
                     }
                     description={
                       <div>
                         {item.status === 'uploading' && (
-                          <Progress
-                            percent={item.progress}
-                            size="small"
-                            status="active"
-                          />
+                          <div className="upload-progress">
+                            <Progress
+                              percent={Math.round(item.progress)}
+                              size="small"
+                              status="active"
+                              strokeColor="#52c41a"
+                              showInfo={true}
+                            />
+                            <div className="progress-description">
+                              正在上传和处理文档...
+                            </div>
+                          </div>
                         )}
                         {item.status === 'error' && (
                           <Text type="danger">{item.error}</Text>
                         )}
                         {item.status === 'done' && (
-                          <Text type="success">上传完成</Text>
+                          <Text type="success">✓ 上传完成，文档已建立索引</Text>
                         )}
                       </div>
                     }
