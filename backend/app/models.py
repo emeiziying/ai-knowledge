@@ -36,7 +36,9 @@ class Document(Base):
     file_size = Column(BigInteger, nullable=False)
     mime_type = Column(String(100), nullable=False)
     file_path = Column(String(500), nullable=False)
-    status = Column(String(20), default="processing")  # processing, completed, failed
+    status = Column(String(20), default="uploaded")  # uploaded, pending, processing, parsing, preprocessing, chunking, completed, failed
+    processing_metadata = Column(JSON)  # Store processing statistics and metadata
+    processing_error = Column(Text)  # Store error details if processing fails
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
