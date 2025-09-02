@@ -72,6 +72,24 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning(f"Failed to initialize RAG service: {e}")
         
+        # Initialize Answer service
+        try:
+            from .chat.answer_service import initialize_answer_service
+            from .chat.conversation_service import get_conversation_service
+            if hasattr(app.state, 'ai_service_manager') and hasattr(app.state, 'rag_service'):
+                conversation_service = get_conversation_service()
+                answer_service = await initialize_answer_service(
+                    app.state.ai_service_manager,
+                    app.state.rag_service,
+                    conversation_service
+                )
+                app.state.answer_service = answer_service
+                logger.info("Answer service initialized successfully")
+            else:
+                logger.warning("Cannot initialize Answer service without AI service manager and RAG service")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Answer service: {e}")
+        
         logger.info("All services initialized successfully")
         
     except Exception as e:

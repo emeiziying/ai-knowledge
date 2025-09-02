@@ -12,6 +12,7 @@ from ..auth.dependencies import get_current_user
 from ..models import User
 from .rag_service import get_rag_service
 from .conversation_service import get_conversation_service
+from .answer_service import get_answer_service
 from .schemas import (
     ConversationCreate, ConversationUpdate, ConversationResponse,
     ConversationListResponse, MessageCreate, MessageResponse,
@@ -73,6 +74,63 @@ class SuggestionsResponse(BaseModel):
     """Search suggestions response model."""
     suggestions: List[str]
     partial_query: str
+
+
+class AnswerRequest(BaseModel):
+    """RAG answer generation request model."""
+    question: str = Field(..., min_length=1, max_length=2000, description="User question")
+    conversation_id: Optional[str] = Field(default=None, description="Optional conversation ID for context")
+    search_params: Optional[Dict[str, Any]] = Field(default=None, description="Optional search parameters")
+    model: Optional[str] = Field(default=None, description="Optional AI model to use")
+    stream: bool = Field(default=False, description="Whether to stream the response")
+
+
+class AnswerSource(BaseModel):
+    """Answer source information model."""
+    document_id: str
+    document_name: str
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
+    created_at: Optional[str] = None
+    chunks_referenced: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class QualityValidation(BaseModel):
+    """Answer quality validation model."""
+    is_valid: bool
+    quality_score: float
+    issues: List[str] = Field(default_factory=list)
+    suggestions: List[str] = Field(default_factory=list)
+
+
+class AnswerResponse(BaseModel):
+    """RAG answer generation response model."""
+    answer: str
+    sources: List[AnswerSource]
+    quality_validation: QualityValidation
+    question: str
+    search_metadata: Dict[str, Any]
+    processing_time_ms: float
+    model_used: Optional[str] = None
+    has_context: bool
+    context_used: bool
+    context_chunks: int
+
+
+class AnswerImprovementRequest(BaseModel):
+    """Answer improvement request model."""
+    original_answer: str = Field(..., min_length=1, description="Original answer to improve")
+    question: str = Field(..., min_length=1, description="Original question")
+    feedback: str = Field(..., min_length=1, description="User feedback on the answer")
+    model: Optional[str] = Field(default=None, description="Optional AI model to use")
+
+
+class AnswerImprovementResponse(BaseModel):
+    """Answer improvement response model."""
+    improved_answer: str
+    sources: List[AnswerSource]
+    quality_validation: QualityValidation
+    improvement_applied: bool
 
 
 @router.post("/search", response_model=SearchResponse)
@@ -533,6 +591,238 @@ async def get_conversation_context(
         )
 
 
+@router.post("/answer", response_model=AnswerResponse)
+async def generate_answer(
+    request: AnswerRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate RAG-based answer for user question.
+    
+    This endpoint combines semantic search with AI generation to provide
+    intelligent answers based on the user's knowledge base.
+    """
+    try:
+        answer_service = get_answer_service()
+        if not answer_service:
+            raise HTTPException(
+                status_code=503,
+                detail="Answer service not available"
+            )
+        
+        # Generate answer
+        result = await answer_service.generate_answer(
+            db=db,
+            question=request.question,
+            user_id=str(current_user.id),
+            conversation_id=request.conversation_id,
+            search_params=request.search_params,
+            model=request.model
+        )
+        
+        return AnswerResponse(**result)
+        
+    except Exception as e:
+        logger.error(f"Answer generation failed for user {current_user.id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Answer generation failed: {str(e)}"
+        )
+
+
+@router.post("/answer/stream")
+async def generate_answer_stream(
+    request: AnswerRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate streaming RAG-based answer for real-time responses.
+    
+    This endpoint provides streaming responses for better user experience
+    with longer answer generation times.
+    """
+    try:
+        answer_service = get_answer_service()
+        if not answer_service:
+            raise HTTPException(
+                status_code=503,
+                detail="Answer service not available"
+            )
+        
+        from fastapi.responses import StreamingResponse
+        
+        async def generate_stream():
+            try:
+                async for chunk in answer_service.generate_streaming_answer(
+                    db=db,
+                    question=request.question,
+                    user_id=str(current_user.id),
+                    conversation_id=request.conversation_id,
+                    search_params=request.search_params,
+                    model=request.model
+                ):
+                    yield f"data: {chunk}\n\n"
+                yield "data: [DONE]\n\n"
+            except Exception as e:
+                logger.error(f"Streaming answer generation failed: {e}")
+                yield f"data: 抱歉，生成回答时出现错误：{str(e)}\n\n"
+                yield "data: [DONE]\n\n"
+        
+        return StreamingResponse(
+            generate_stream(),
+            media_type="text/plain",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Content-Type": "text/event-stream"
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Streaming answer generation failed for user {current_user.id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Streaming answer generation failed: {str(e)}"
+        )
+
+
+@router.post("/answer/improve", response_model=AnswerImprovementResponse)
+async def improve_answer(
+    request: AnswerImprovementRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Improve an existing answer based on user feedback.
+    
+    This endpoint allows users to provide feedback on generated answers
+    and receive improved versions.
+    """
+    try:
+        answer_service = get_answer_service()
+        if not answer_service:
+            raise HTTPException(
+                status_code=503,
+                detail="Answer service not available"
+            )
+        
+        # First, perform search to get context for improvement
+        rag_service = get_rag_service()
+        if not rag_service:
+            raise HTTPException(
+                status_code=503,
+                detail="RAG service not available"
+            )
+        
+        search_results = await rag_service.search_documents(
+            db=db,
+            query=request.question,
+            user_id=str(current_user.id),
+            limit=5,
+            score_threshold=0.7
+        )
+        
+        # Improve answer
+        result = await answer_service.improve_answer(
+            original_answer=request.original_answer,
+            question=request.question,
+            feedback=request.feedback,
+            search_results=search_results["results"],
+            model=request.model
+        )
+        
+        return AnswerImprovementResponse(**result)
+        
+    except Exception as e:
+        logger.error(f"Answer improvement failed for user {current_user.id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Answer improvement failed: {str(e)}"
+        )
+
+
+@router.post("/qa", response_model=MessageResponse)
+async def ask_question(
+    request: AnswerRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Ask a question and automatically save to conversation.
+    
+    This endpoint combines answer generation with conversation management,
+    automatically creating or updating a conversation with the Q&A pair.
+    """
+    try:
+        answer_service = get_answer_service()
+        conversation_service = get_conversation_service()
+        
+        if not answer_service:
+            raise HTTPException(
+                status_code=503,
+                detail="Answer service not available"
+            )
+        
+        # Create conversation if not provided
+        conversation_id = request.conversation_id
+        if not conversation_id:
+            conv_result = await conversation_service.create_conversation(
+                db=db,
+                user_id=str(current_user.id),
+                title=request.question[:50] + "..." if len(request.question) > 50 else request.question
+            )
+            conversation_id = conv_result["id"]
+        
+        # Add user message
+        user_message = await conversation_service.add_message(
+            db=db,
+            conversation_id=conversation_id,
+            user_id=str(current_user.id),
+            role="user",
+            content=request.question
+        )
+        
+        # Generate answer
+        answer_result = await answer_service.generate_answer(
+            db=db,
+            question=request.question,
+            user_id=str(current_user.id),
+            conversation_id=conversation_id,
+            search_params=request.search_params,
+            model=request.model
+        )
+        
+        # Add assistant message with metadata
+        assistant_metadata = {
+            "sources": answer_result["sources"],
+            "quality_validation": answer_result["quality_validation"],
+            "search_metadata": answer_result["search_metadata"],
+            "processing_time_ms": answer_result["processing_time_ms"],
+            "model_used": answer_result["model_used"],
+            "has_context": answer_result["has_context"]
+        }
+        
+        assistant_message = await conversation_service.add_message(
+            db=db,
+            conversation_id=conversation_id,
+            user_id=str(current_user.id),
+            role="assistant",
+            content=answer_result["answer"],
+            metadata=assistant_metadata
+        )
+        
+        return MessageResponse(**assistant_message)
+        
+    except Exception as e:
+        logger.error(f"Q&A failed for user {current_user.id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Q&A failed: {str(e)}"
+        )
+
+
 @router.get("/health")
 async def health_check():
     """
@@ -540,19 +830,30 @@ async def health_check():
     """
     try:
         rag_service = get_rag_service()
+        answer_service = get_answer_service()
         
-        if not rag_service:
-            return {
-                "status": "unhealthy",
-                "message": "RAG service not initialized"
-            }
-        
-        # Basic health check - could be extended with more detailed checks
-        return {
+        health_status = {
             "status": "healthy",
-            "message": "RAG service is operational",
-            "cache_available": rag_service.search_cache.redis_client is not None
+            "message": "Chat services operational",
+            "services": {}
         }
+        
+        # Check RAG service
+        if not rag_service:
+            health_status["services"]["rag"] = "unavailable"
+            health_status["status"] = "degraded"
+        else:
+            health_status["services"]["rag"] = "available"
+            health_status["cache_available"] = rag_service.search_cache.redis_client is not None
+        
+        # Check answer service
+        if not answer_service:
+            health_status["services"]["answer"] = "unavailable"
+            health_status["status"] = "degraded"
+        else:
+            health_status["services"]["answer"] = "available"
+        
+        return health_status
         
     except Exception as e:
         logger.error(f"Health check failed: {e}")
