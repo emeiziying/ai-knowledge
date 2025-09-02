@@ -11,6 +11,12 @@ from ..database import get_db
 from ..auth.dependencies import get_current_user
 from ..models import User
 from .rag_service import get_rag_service
+from .conversation_service import get_conversation_service
+from .schemas import (
+    ConversationCreate, ConversationUpdate, ConversationResponse,
+    ConversationListResponse, MessageCreate, MessageResponse,
+    MessageListResponse, ConversationContextResponse
+)
 
 logger = logging.getLogger(__name__)
 
@@ -246,6 +252,284 @@ async def clear_search_cache(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to clear cache: {str(e)}"
+        )
+
+
+# Conversation Management Endpoints
+
+@router.post("/conversations", response_model=ConversationResponse)
+async def create_conversation(
+    request: ConversationCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new conversation for the current user.
+    
+    This endpoint creates a new conversation session that can be used
+    to maintain context across multiple messages.
+    """
+    try:
+        conversation_service = get_conversation_service()
+        
+        result = await conversation_service.create_conversation(
+            db=db,
+            user_id=str(current_user.id),
+            title=request.title
+        )
+        
+        return ConversationResponse(**result)
+        
+    except Exception as e:
+        logger.error(f"Failed to create conversation for user {current_user.id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create conversation: {str(e)}"
+        )
+
+
+@router.get("/conversations", response_model=ConversationListResponse)
+async def get_conversations(
+    limit: int = Query(default=50, ge=1, le=100, description="Maximum number of conversations to return"),
+    offset: int = Query(default=0, ge=0, description="Number of conversations to skip"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get conversations for the current user with pagination.
+    
+    Returns a list of conversations ordered by most recently updated.
+    """
+    try:
+        conversation_service = get_conversation_service()
+        
+        result = await conversation_service.get_conversations(
+            db=db,
+            user_id=str(current_user.id),
+            limit=limit,
+            offset=offset
+        )
+        
+        return ConversationListResponse(**result)
+        
+    except Exception as e:
+        logger.error(f"Failed to get conversations for user {current_user.id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get conversations: {str(e)}"
+        )
+
+
+@router.get("/conversations/{conversation_id}", response_model=ConversationResponse)
+async def get_conversation(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get a specific conversation by ID.
+    
+    Returns conversation details including message count.
+    """
+    try:
+        conversation_service = get_conversation_service()
+        
+        result = await conversation_service.get_conversation(
+            db=db,
+            conversation_id=conversation_id,
+            user_id=str(current_user.id)
+        )
+        
+        return ConversationResponse(**result)
+        
+    except Exception as e:
+        logger.error(f"Failed to get conversation {conversation_id} for user {current_user.id}: {e}")
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get conversation: {str(e)}"
+        )
+
+
+@router.put("/conversations/{conversation_id}", response_model=ConversationResponse)
+async def update_conversation(
+    conversation_id: str,
+    request: ConversationUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update a conversation's details.
+    
+    Currently supports updating the conversation title.
+    """
+    try:
+        conversation_service = get_conversation_service()
+        
+        result = await conversation_service.update_conversation(
+            db=db,
+            conversation_id=conversation_id,
+            user_id=str(current_user.id),
+            title=request.title
+        )
+        
+        return ConversationResponse(**result)
+        
+    except Exception as e:
+        logger.error(f"Failed to update conversation {conversation_id} for user {current_user.id}: {e}")
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update conversation: {str(e)}"
+        )
+
+
+@router.delete("/conversations/{conversation_id}")
+async def delete_conversation(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a conversation and all its messages.
+    
+    This action is irreversible and will permanently delete
+    the conversation and all associated messages.
+    """
+    try:
+        conversation_service = get_conversation_service()
+        
+        result = await conversation_service.delete_conversation(
+            db=db,
+            conversation_id=conversation_id,
+            user_id=str(current_user.id)
+        )
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Failed to delete conversation {conversation_id} for user {current_user.id}: {e}")
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete conversation: {str(e)}"
+        )
+
+
+@router.post("/conversations/{conversation_id}/messages", response_model=MessageResponse)
+async def add_message(
+    conversation_id: str,
+    request: MessageCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Add a message to a conversation.
+    
+    This endpoint allows adding both user messages and assistant responses
+    to maintain conversation history.
+    """
+    try:
+        conversation_service = get_conversation_service()
+        
+        result = await conversation_service.add_message(
+            db=db,
+            conversation_id=conversation_id,
+            user_id=str(current_user.id),
+            role=request.role,
+            content=request.content,
+            metadata=request.metadata
+        )
+        
+        return MessageResponse(**result)
+        
+    except Exception as e:
+        logger.error(f"Failed to add message to conversation {conversation_id} for user {current_user.id}: {e}")
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to add message: {str(e)}"
+        )
+
+
+@router.get("/conversations/{conversation_id}/messages", response_model=MessageListResponse)
+async def get_messages(
+    conversation_id: str,
+    limit: int = Query(default=100, ge=1, le=500, description="Maximum number of messages to return"),
+    offset: int = Query(default=0, ge=0, description="Number of messages to skip"),
+    include_metadata: bool = Query(default=True, description="Whether to include message metadata"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get messages from a conversation with pagination.
+    
+    Returns messages in chronological order (oldest first).
+    """
+    try:
+        conversation_service = get_conversation_service()
+        
+        result = await conversation_service.get_messages(
+            db=db,
+            conversation_id=conversation_id,
+            user_id=str(current_user.id),
+            limit=limit,
+            offset=offset,
+            include_metadata=include_metadata
+        )
+        
+        return MessageListResponse(**result)
+        
+    except Exception as e:
+        logger.error(f"Failed to get messages for conversation {conversation_id} for user {current_user.id}: {e}")
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get messages: {str(e)}"
+        )
+
+
+@router.get("/conversations/{conversation_id}/context", response_model=ConversationContextResponse)
+async def get_conversation_context(
+    conversation_id: str,
+    max_messages: int = Query(default=10, ge=1, le=50, description="Maximum number of recent messages to include"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get recent conversation context for multi-turn dialogue.
+    
+    Returns the most recent messages from the conversation to provide
+    context for generating responses.
+    """
+    try:
+        conversation_service = get_conversation_service()
+        
+        context = await conversation_service.get_conversation_context(
+            db=db,
+            conversation_id=conversation_id,
+            user_id=str(current_user.id),
+            max_messages=max_messages
+        )
+        
+        return ConversationContextResponse(
+            context=context,
+            conversation_id=conversation_id,
+            max_messages=max_messages
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to get context for conversation {conversation_id} for user {current_user.id}: {e}")
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get conversation context: {str(e)}"
         )
 
 

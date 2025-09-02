@@ -293,3 +293,69 @@ class ValidationError(BaseModel):
     field: str
     message: str
     invalid_value: Optional[Any] = None
+
+
+# Conversation Management Schemas
+
+class ConversationCreate(BaseModel):
+    """Schema for creating a new conversation."""
+    title: Optional[str] = Field(None, max_length=255, description="Optional title for the conversation")
+
+
+class ConversationUpdate(BaseModel):
+    """Schema for updating a conversation."""
+    title: Optional[str] = Field(None, max_length=255, description="New title for the conversation")
+
+
+class MessageCreate(BaseModel):
+    """Schema for creating a new message."""
+    role: str = Field(..., pattern="^(user|assistant)$", description="Role of the message sender")
+    content: str = Field(..., min_length=1, max_length=10000, description="Content of the message")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Optional metadata for the message")
+
+
+class MessageResponse(BaseModel):
+    """Schema for message response."""
+    id: str
+    conversation_id: str
+    role: str
+    content: str
+    metadata: Optional[Dict[str, Any]] = None
+    created_at: str
+
+
+class ConversationResponse(BaseModel):
+    """Schema for conversation response."""
+    id: str
+    user_id: str
+    title: str
+    created_at: str
+    updated_at: str
+    message_count: int
+    last_message: Optional[Dict[str, Any]] = None
+
+
+class ConversationListResponse(BaseModel):
+    """Schema for conversation list response."""
+    conversations: List[ConversationResponse]
+    total_count: int
+    limit: int
+    offset: int
+    has_more: bool
+
+
+class MessageListResponse(BaseModel):
+    """Schema for message list response."""
+    messages: List[MessageResponse]
+    total_count: int
+    limit: int
+    offset: int
+    has_more: bool
+    conversation: Dict[str, Any]
+
+
+class ConversationContextResponse(BaseModel):
+    """Schema for conversation context response."""
+    context: List[Dict[str, Any]]
+    conversation_id: str
+    max_messages: int
