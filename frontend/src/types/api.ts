@@ -33,7 +33,7 @@ export interface Document {
   file_size: number;
   mime_type: string;
   file_path: string;
-  status: 'processing' | 'completed' | 'failed';
+  status: "processing" | "completed" | "failed";
   created_at: string;
   updated_at: string;
 }
@@ -55,7 +55,7 @@ export interface Conversation {
 export interface Message {
   id: string;
   conversation_id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   metadata?: {
     sources?: Array<{
@@ -107,7 +107,7 @@ export interface PaginatedResponse<T> {
 
 // System status types
 export interface SystemStatus {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: "healthy" | "degraded" | "unhealthy";
   services: {
     database: boolean;
     vector_db: boolean;

@@ -53,39 +53,5 @@ export const authService = {
     return localStorage.getItem('access_token');
   },
 
-  // Start automatic token refresh
-  startTokenRefresh: (): void => {
-    // Clear any existing timer
-    authService.stopTokenRefresh();
-    
-    // Set up automatic refresh
-    refreshTimer = setInterval(async () => {
-      try {
-        if (authService.isAuthenticated()) {
-          await authService.refreshToken();
-        } else {
-          authService.stopTokenRefresh();
-        }
-      } catch (error) {
-        console.warn('Automatic token refresh failed:', error);
-        // Stop refresh timer if refresh fails
-        authService.stopTokenRefresh();
-      }
-    }, TOKEN_REFRESH_INTERVAL);
-  },
 
-  // Stop automatic token refresh
-  stopTokenRefresh: (): void => {
-    if (refreshTimer) {
-      clearInterval(refreshTimer);
-      refreshTimer = null;
-    }
-  },
-
-  // Initialize auth service (call on app startup)
-  initialize: (): void => {
-    if (authService.isAuthenticated()) {
-      authService.startTokenRefresh();
-    }
-  },
 };
