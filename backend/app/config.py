@@ -41,7 +41,20 @@ class Settings(BaseSettings):
     
     # AI Services
     openai_api_key: str = ""
+    openai_base_url: Optional[str] = None
+    openai_organization: Optional[str] = None
+    openai_chat_model: str = "gpt-3.5-turbo"
+    openai_embedding_model: str = "text-embedding-ada-002"
+    
     ollama_base_url: str = "http://localhost:11434"
+    ollama_chat_model: str = "llama2"
+    ollama_embedding_model: str = "nomic-embed-text"
+    ollama_timeout: int = 60
+    
+    # AI Service Management
+    ai_health_check_interval: int = 300  # 5 minutes
+    ai_max_retry_attempts: int = 3
+    ai_circuit_breaker_threshold: int = 5
     
     # File Upload
     max_file_size: int = 50 * 1024 * 1024  # 50MB

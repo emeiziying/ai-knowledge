@@ -9,6 +9,8 @@ from .vector_store import vector_store
 from .storage import storage
 from .processing.embeddings import initialize_default_embedding_service
 from .processing.vector_storage import initialize_vector_storage
+from .ai.factory import AIServiceFactory
+from .config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,16 @@ async def lifespan(app: FastAPI):
         else:
             logger.warning("Failed to initialize vector storage service")
         
+        # Initialize AI service manager
+        try:
+            settings = get_settings()
+            ai_service_manager = AIServiceFactory.create_service_manager(settings)
+            await ai_service_manager.start_health_monitoring()
+            app.state.ai_service_manager = ai_service_manager
+            logger.info("AI service manager initialized and health monitoring started")
+        except Exception as e:
+            logger.warning(f"Failed to initialize AI service manager: {e}")
+        
         logger.info("All services initialized successfully")
         
     except Exception as e:
@@ -60,6 +72,11 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down AI Knowledge Base application...")
     
     try:
+        # Stop AI service health monitoring
+        if hasattr(app.state, 'ai_service_manager'):
+            await app.state.ai_service_manager.stop_health_monitoring()
+            logger.info("AI service health monitoring stopped")
+        
         # Close vector store connection
         await vector_store.close()
         logger.info("Vector store connection closed")
@@ -83,7 +100,8 @@ async def check_services_health():
         "database": False,
         "vector_store": False,
         "object_storage": False,
-        "redis": False
+        "redis": False,
+        "ai_services": False
     }
     
     # Check database
@@ -125,6 +143,19 @@ async def check_services_health():
         logger.debug("Redis health check passed")
     except Exception as e:
         logger.warning(f"Redis health check failed: {e}")
+    
+    # Check AI services
+    try:
+        settings = get_settings()
+        ai_service_manager = AIServiceFactory.create_service_manager(settings)
+        ai_status = await ai_service_manager.get_service_status()
+        # Consider AI services healthy if at least one service is available
+        services_status["ai_services"] = any(
+            status.status.value == "healthy" for status in ai_status.values()
+        )
+        logger.debug("AI services health check passed")
+    except Exception as e:
+        logger.warning(f"AI services health check failed: {e}")
     
     healthy_services = sum(services_status.values())
     total_services = len(services_status)
