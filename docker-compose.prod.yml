@@ -4,53 +4,56 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: ai_kb_postgres
-    restart: unless-stopped
+    container_name: ai_kb_postgres_prod
+    restart: always
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-ai_knowledge_base}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/scripts/init_db.py:/docker-entrypoint-initdb.d/init_db.py
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - ./backups:/backups
     networks:
       - ai_kb_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ai_knowledge_base}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: ai_kb_redis
-    restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    container_name: ai_kb_redis_prod
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
     networks:
       - ai_kb_network
     healthcheck:
-      test: ["CMD", "redis-cli", "--no-auth-warning", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Qdrant Vector Database
   qdrant:
     image: qdrant/qdrant:v1.7.4
-    container_name: ai_kb_qdrant
-    restart: unless-stopped
-    ports:
-      - "${QDRANT_HTTP_PORT:-6333}:6333"
-      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    container_name: ai_kb_qdrant_prod
+    restart: always
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
@@ -58,51 +61,55 @@ services:
     environment:
       QDRANT__SERVICE__HTTP_PORT: 6333
       QDRANT__SERVICE__GRPC_PORT: 6334
-      QDRANT__LOG_LEVEL: INFO
+      QDRANT__LOG_LEVEL: WARN
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
       interval: 30s
       timeout: 10s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # MinIO Object Storage
   minio:
     image: minio/minio:RELEASE.2024-01-16T16-07-38Z
-    container_name: ai_kb_minio
-    restart: unless-stopped
-    ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    container_name: ai_kb_minio_prod
+    restart: always
     volumes:
       - minio_data:/data
     networks:
       - ai_kb_network
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
-      MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server /data --console-address ":9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Backend API Service
   backend:
     build: 
       context: ./backend
       dockerfile: Dockerfile
-    container_name: ai_kb_backend
-    restart: unless-stopped
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
+    container_name: ai_kb_backend_prod
+    restart: always
     environment:
       # Database
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-ai_knowledge_base}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       
       # Redis
-      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       
       # Qdrant
       QDRANT_HOST: qdrant
@@ -110,23 +117,23 @@ services:
       
       # MinIO
       MINIO_ENDPOINT: minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
-      MINIO_BUCKET: ${MINIO_BUCKET:-documents}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIO_BUCKET: ${MINIO_BUCKET}
       MINIO_SECURE: "false"
       
       # JWT
-      SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
-      ALGORITHM: ${ALGORITHM:-HS256}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
       
       # AI Services
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
       
       # Application
-      DEBUG: ${DEBUG:-false}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DEBUG: "false"
+      LOG_LEVEL: ${LOG_LEVEL:-WARN}
     depends_on:
       postgres:
         condition: service_healthy
@@ -146,6 +153,11 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Frontend Application
   frontend:
@@ -153,11 +165,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
-    container_name: ai_kb_frontend
-    restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-3000}:80"
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    container_name: ai_kb_frontend_prod
+    restart: always
     depends_on:
       backend:
         condition: service_healthy
@@ -168,43 +178,55 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Ollama (Optional local AI service)
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ai_kb_ollama
-    restart: unless-stopped
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: ai_kb_nginx_prod
+    restart: always
     ports:
-      - "${OLLAMA_PORT:-11434}:11434"
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
     volumes:
-      - ollama_data:/root/.ollama
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - frontend
+      - backend
     networks:
       - ai_kb_network
-    profiles:
-      - ollama
-    environment:
-      OLLAMA_HOST: 0.0.0.0
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
       interval: 30s
       timeout: 10s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   ai_kb_network:
     driver: bridge
-    name: ai_knowledge_base_network
+    name: ai_knowledge_base_network_prod
 
 volumes:
   postgres_data:
-    name: ai_kb_postgres_data
+    name: ai_kb_postgres_data_prod
   redis_data:
-    name: ai_kb_redis_data
+    name: ai_kb_redis_data_prod
   qdrant_data:
-    name: ai_kb_qdrant_data
+    name: ai_kb_qdrant_data_prod
   minio_data:
-    name: ai_kb_minio_data
-  ollama_data:
-    name: ai_kb_ollama_data
+    name: ai_kb_minio_data_prod
   backend_logs:
-    name: ai_kb_backend_logs
+    name: ai_kb_backend_logs_prod
+  nginx_logs:
+    name: ai_kb_nginx_logs_prod
