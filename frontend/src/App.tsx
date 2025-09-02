@@ -1,14 +1,12 @@
-import React from 'react';
+import { RouterProvider } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
+import { router } from './router';
 
 function App() {
   return (
     <ConfigProvider locale={zhCN}>
-      <div className="App">
-        <h1>AI Knowledge Base</h1>
-        <p>Welcome to AI Knowledge Base Application</p>
-      </div>
+      <RouterProvider router={router} />
     </ConfigProvider>
   );
 }

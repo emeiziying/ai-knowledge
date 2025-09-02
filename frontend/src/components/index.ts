@@ -1,1 +1,1 @@
-// Export all components from this file
+export { MainLayout } from './Layout';
