@@ -12,7 +12,17 @@ from ..auth.dependencies import get_current_user
 from ..models import User
 from .error_handler import get_error_monitoring_service, get_error_metrics
 from ..ai.service_manager import AIServiceManager
-from ..startup import get_ai_service_manager
+# from ..startup import get_ai_service_manager
+
+def get_ai_service_manager():
+    """Get AI service manager from app state or create a new one."""
+    try:
+        from ..ai.factory import AIServiceFactory
+        from ..config import get_settings
+        settings = get_settings()
+        return AIServiceFactory.create_service_manager(settings)
+    except Exception:
+        return None
 
 logger = logging.getLogger(__name__)
 
