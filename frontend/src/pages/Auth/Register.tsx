@@ -51,7 +51,7 @@ const Register: React.FC = () => {
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
           borderRadius: '12px'
         }}
-        bodyStyle={{ padding: '40px' }}
+        styles={{ body: { padding: '40px' } }}
       >
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <Title level={2} style={{ color: '#1890ff', marginBottom: '8px' }}>

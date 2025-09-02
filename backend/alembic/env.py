@@ -14,7 +14,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from app.database import Base
 from app.models import *  # Import all models
-from app.config import settings
+from app.config import get_settings
+
+settings = get_settings()
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

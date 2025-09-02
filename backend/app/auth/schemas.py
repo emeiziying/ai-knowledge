@@ -39,6 +39,13 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
+class AuthResponse(BaseModel):
+    """Authentication response schema."""
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+
 class TokenData(BaseModel):
     """Token data schema."""
     user_id: Optional[str] = None

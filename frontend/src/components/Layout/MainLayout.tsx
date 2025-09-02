@@ -1,17 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Space, Typography, message, Button, Drawer } from 'antd';
-import { 
-  FileTextOutlined, 
-  MessageOutlined, 
-  SettingOutlined, 
+import React, { useState, useEffect } from "react";
+import {
+  Layout,
+  Menu,
+  Avatar,
+  Dropdown,
+  Space,
+  Typography,
+  message,
+  Button,
+  Drawer,
+} from "antd";
+import {
+  FileTextOutlined,
+  MessageOutlined,
+  SettingOutlined,
   UserOutlined,
   LogoutOutlined,
   DashboardOutlined,
-  MenuOutlined
-} from '@ant-design/icons';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import './MainLayout.css';
+  MenuOutlined,
+} from "@ant-design/icons";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import "./MainLayout.css";
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -35,43 +45,43 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const menuItems = [
     {
-      key: '/',
+      key: "/",
       icon: <DashboardOutlined />,
-      label: '仪表板',
+      label: "仪表板",
     },
     {
-      key: '/documents',
+      key: "/documents",
       icon: <FileTextOutlined />,
-      label: '文档管理',
+      label: "文档管理",
     },
     {
-      key: '/chat',
+      key: "/chat",
       icon: <MessageOutlined />,
-      label: '智能问答',
+      label: "智能问答",
     },
     {
-      key: '/settings',
+      key: "/settings",
       icon: <SettingOutlined />,
-      label: '系统设置',
+      label: "系统设置",
     },
   ];
 
   const userMenuItems = [
     {
-      key: 'profile',
+      key: "profile",
       icon: <UserOutlined />,
-      label: '个人资料',
+      label: "个人资料",
     },
     {
-      key: 'logout',
+      key: "logout",
       icon: <LogoutOutlined />,
-      label: '退出登录',
+      label: "退出登录",
       danger: true,
     },
   ];
@@ -84,21 +94,19 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   };
 
   const handleUserMenuClick = async ({ key }: { key: string }) => {
-    if (key === 'logout') {
+    if (key === "logout") {
       try {
         await logout();
-        message.success('已成功退出登录');
-        navigate('/auth/login', { replace: true });
+        message.success("已成功退出登录");
+        navigate("/auth/login", { replace: true });
       } catch (error) {
-        message.error('退出登录失败');
+        message.error("退出登录失败");
       }
-    } else if (key === 'profile') {
+    } else if (key === "profile") {
       // TODO: Navigate to profile page or show profile modal
-      message.info('个人资料功能即将上线');
+      message.info("个人资料功能即将上线");
     }
   };
-
-
 
   return (
     <Layout className="main-layout">
@@ -108,7 +116,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           theme="light"
           width={250}
           style={{
-            boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
+            boxShadow: "2px 0 8px rgba(0,0,0,0.1)",
           }}
         >
           <div className="sidebar-content">
@@ -136,7 +144,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           placement="left"
           onClose={() => setDrawerVisible(false)}
           open={drawerVisible}
-          bodyStyle={{ padding: 0 }}
+          styles={{ body: { padding: 0 } }}
           width={250}
         >
           <div className="sidebar-content">
@@ -155,9 +163,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </div>
         </Drawer>
       )}
-      
+
       <Layout>
-        <Header className={`main-header ${isMobile ? 'mobile' : 'desktop'}`}>
+        <Header className={`main-header ${isMobile ? "mobile" : "desktop"}`}>
           {/* Mobile menu button */}
           {isMobile && (
             <Button
@@ -185,14 +193,17 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           >
             <div className="user-dropdown">
               <Space>
-                <Avatar icon={<UserOutlined />} size={isMobile ? 'small' : 'default'} />
-                {!isMobile && <span>{user?.username || '用户'}</span>}
+                <Avatar
+                  icon={<UserOutlined />}
+                  size={isMobile ? "small" : "default"}
+                />
+                {!isMobile && <span>{user?.username || "用户"}</span>}
               </Space>
             </div>
           </Dropdown>
         </Header>
-        
-        <Content className={`main-content ${isMobile ? 'mobile' : 'desktop'}`}>
+
+        <Content className={`main-content ${isMobile ? "mobile" : "desktop"}`}>
           {children}
         </Content>
       </Layout>
