@@ -1,40 +1,69 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { MainLayout } from '../components';
-import { Dashboard, Documents, Chat, Settings } from '../pages';
+import { MainLayout, ProtectedRoute, AuthRedirect } from '../components';
+import { Dashboard, Documents, Chat, Settings, Login, Register } from '../pages';
 
 export const router = createBrowserRouter([
+  // Authentication routes (public)
+  {
+    path: '/auth/login',
+    element: (
+      <AuthRedirect>
+        <Login />
+      </AuthRedirect>
+    ),
+  },
+  {
+    path: '/auth/register',
+    element: (
+      <AuthRedirect>
+        <Register />
+      </AuthRedirect>
+    ),
+  },
+  
+  // Protected routes
   {
     path: '/',
     element: (
-      <MainLayout>
-        <Dashboard />
-      </MainLayout>
+      <ProtectedRoute>
+        <MainLayout>
+          <Dashboard />
+        </MainLayout>
+      </ProtectedRoute>
     ),
   },
   {
     path: '/documents',
     element: (
-      <MainLayout>
-        <Documents />
-      </MainLayout>
+      <ProtectedRoute>
+        <MainLayout>
+          <Documents />
+        </MainLayout>
+      </ProtectedRoute>
     ),
   },
   {
     path: '/chat',
     element: (
-      <MainLayout>
-        <Chat />
-      </MainLayout>
+      <ProtectedRoute>
+        <MainLayout>
+          <Chat />
+        </MainLayout>
+      </ProtectedRoute>
     ),
   },
   {
     path: '/settings',
     element: (
-      <MainLayout>
-        <Settings />
-      </MainLayout>
+      <ProtectedRoute>
+        <MainLayout>
+          <Settings />
+        </MainLayout>
+      </ProtectedRoute>
     ),
   },
+  
+  // Catch all route - redirect to dashboard
   {
     path: '*',
     element: <Navigate to="/" replace />,

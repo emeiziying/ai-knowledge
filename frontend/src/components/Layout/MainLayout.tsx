@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Menu, Avatar, Dropdown, Space, Typography } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Space, Typography, message } from 'antd';
 import { 
   FileTextOutlined, 
   MessageOutlined, 
@@ -9,6 +9,7 @@ import {
   DashboardOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -20,6 +21,7 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const menuItems = [
     {
@@ -62,13 +64,18 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     navigate(key);
   };
 
-  const handleUserMenuClick = ({ key }: { key: string }) => {
+  const handleUserMenuClick = async ({ key }: { key: string }) => {
     if (key === 'logout') {
-      // TODO: Implement logout logic
-      console.log('Logout clicked');
+      try {
+        await logout();
+        message.success('已成功退出登录');
+        navigate('/auth/login', { replace: true });
+      } catch (error) {
+        message.error('退出登录失败');
+      }
     } else if (key === 'profile') {
-      // TODO: Navigate to profile page
-      console.log('Profile clicked');
+      // TODO: Navigate to profile page or show profile modal
+      message.info('个人资料功能即将上线');
     }
   };
 
@@ -119,7 +126,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           >
             <Space style={{ cursor: 'pointer' }}>
               <Avatar icon={<UserOutlined />} />
-              <span>用户</span>
+              <span>{user?.username || '用户'}</span>
             </Space>
           </Dropdown>
         </Header>
