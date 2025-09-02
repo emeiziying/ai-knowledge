@@ -148,20 +148,20 @@
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: auto;
-  min-height: calc(100vh - 112px);
+  min-height: calc(100vh - 64px); /* 头部高度 */
 }
 
 .main-content.mobile {
   margin: 12px;
   padding: 16px;
   border-radius: 6px;
-  min-height: calc(100vh - 88px);
+  min-height: calc(100vh - 80px); /* 56px头部 + 24px margin */
 }
 
 .main-content.desktop {
   margin: 24px;
   padding: 24px;
-  min-height: calc(100vh - 112px);
+  min-height: calc(100vh - 112px); /* 64px头部 + 48px margin */
 }
 
 /* Mobile drawer */

@@ -1,6 +1,8 @@
 /* Documents Page Styles */
 .documents-page {
   padding: 24px;
+  height: 100%;
+  overflow: auto;
 }
 
 .documents-header {

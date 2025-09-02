@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Layout, Row, Col, message } from 'antd';
+import { Row, Col, message } from 'antd';
 import { useChatStore } from '../../stores/chatStore';
 import ConversationList from '../../components/Chat/ConversationList';
 import ChatInterface from '../../components/Chat/ChatInterface';
 import './Chat.css';
-
-const { Content } = Layout;
 
 const Chat: React.FC = () => {
   const {
@@ -55,8 +53,8 @@ const Chat: React.FC = () => {
   };
 
   return (
-    <Layout className="chat-layout">
-      <Content className="chat-content">
+    <div className="chat-layout">
+      <div className="chat-content">
         <Row className="chat-row" gutter={0}>
           {/* Conversation List - Hidden on mobile when a conversation is selected */}
           <Col 
@@ -90,8 +88,8 @@ const Chat: React.FC = () => {
             />
           </Col>
         </Row>
-      </Content>
-    </Layout>
+      </div>
+    </div>
   );
 };
 
