@@ -116,7 +116,8 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
         } catch (error: any) {
-          // If getting user fails, likely token is invalid
+          // Always clear token and logout on any error to prevent retry loops
+          localStorage.removeItem('access_token');
           set({
             user: null,
             isAuthenticated: false,

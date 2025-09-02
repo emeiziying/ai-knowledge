@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useAuthStore } from '../stores/authStore';
+import { useEffect, useRef } from "react";
+import { useAuthStore } from "../stores/authStore";
 
 /**
  * Custom hook for authentication functionality
@@ -18,9 +18,12 @@ export const useAuth = () => {
     clearError,
   } = useAuthStore();
 
-  // Auto-fetch user data on mount if authenticated
+  const hasAttemptedFetch = useRef(false);
+
+  // Auto-fetch user data on mount if authenticated (only once)
   useEffect(() => {
-    if (isAuthenticated && !user && !isLoading) {
+    if (isAuthenticated && !user && !isLoading && !hasAttemptedFetch.current) {
+      hasAttemptedFetch.current = true;
       getCurrentUser();
     }
   }, [isAuthenticated, user, isLoading, getCurrentUser]);
@@ -31,7 +34,7 @@ export const useAuth = () => {
     isAuthenticated,
     isLoading,
     error,
-    
+
     // Actions
     login,
     register,
