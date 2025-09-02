@@ -1,0 +1,38 @@
+.chat-layout {
+  height: 100vh;
+  background: #f5f5f5;
+}
+
+.chat-content {
+  height: 100%;
+  padding: 0;
+}
+
+.chat-row {
+  height: 100%;
+  margin: 0;
+}
+
+.conversation-sidebar {
+  height: 100vh;
+  background: #fff;
+  border-right: 1px solid #e8e8e8;
+  padding: 0;
+}
+
+.chat-main {
+  height: 100vh;
+  background: #fff;
+  padding: 0;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 767px) {
+  .conversation-sidebar {
+    height: 100vh;
+  }
+  
+  .chat-main {
+    height: 100vh;
+  }
+}
