@@ -30,6 +30,21 @@ install-backend: ## Install backend dependencies
 install-frontend: ## Install frontend dependencies
 	cd frontend && npm install
 
+init-db: ## Initialize database with migrations and test data
+	cd backend && python scripts/init_db.py
+
+health-check: ## Run health check for all services
+	cd backend && python scripts/health_check.py
+
+migrate: ## Run database migrations
+	cd backend && alembic upgrade head
+
+migrate-create: ## Create a new migration (usage: make migrate-create MESSAGE="description")
+	cd backend && alembic revision --autogenerate -m "$(MESSAGE)"
+
+migrate-downgrade: ## Downgrade database by one migration
+	cd backend && alembic downgrade -1
+
 clean: ## Clean up containers and volumes
 	docker-compose down -v
 	docker-compose -f docker-compose.dev.yml down -v

@@ -2,6 +2,9 @@ import os
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
+    # Application
+    debug: bool = False
+    
     # Database
     database_url: str = "postgresql://postgres:password@localhost:5432/ai_knowledge_base"
     
