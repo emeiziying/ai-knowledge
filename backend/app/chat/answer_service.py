@@ -403,7 +403,12 @@ class RAGAnswerService:
             
         except Exception as e:
             logger.error(f"Failed to generate answer: {e}")
-            raise Exception(f"Failed to generate answer: {str(e)}")
+            from ..middleware.error_handler import AIServiceError
+            raise AIServiceError(
+                message=f"Failed to generate answer: {str(e)}",
+                service_type="rag_answer_service",
+                error_code="ANSWER_GENERATION_FAILED"
+            )
     
     async def _generate_contextual_answer(
         self,
@@ -587,6 +592,8 @@ class RAGAnswerService:
                 
         except Exception as e:
             logger.error(f"Failed to generate streaming answer: {e}")
+            from ..middleware.error_handler import AIServiceError
+            # For streaming, we yield the error message instead of raising
             yield f"抱歉，生成回答时出现错误：{str(e)}"
     
     async def improve_answer(
@@ -663,7 +670,12 @@ class RAGAnswerService:
             
         except Exception as e:
             logger.error(f"Failed to improve answer: {e}")
-            raise Exception(f"Failed to improve answer: {str(e)}")
+            from ..middleware.error_handler import AIServiceError
+            raise AIServiceError(
+                message=f"Failed to improve answer: {str(e)}",
+                service_type="rag_answer_service",
+                error_code="ANSWER_IMPROVEMENT_FAILED"
+            )
 
 
 # Global service instance

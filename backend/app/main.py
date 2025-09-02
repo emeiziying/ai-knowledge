@@ -10,12 +10,13 @@ from .middleware.cors import add_cors_middleware
 from .middleware.logging import LoggingMiddleware, setup_logging
 from .middleware.error_handler import (
     APIError,
-    api_error_handler,
+    enhanced_api_error_handler,
     http_exception_handler,
     validation_exception_handler,
-    general_exception_handler
+    enhanced_general_exception_handler
 )
 from .middleware.security import add_security_middleware, add_security_headers
+from .middleware.monitoring_router import router as monitoring_router
 
 # Import routers
 from .routers.health import router as health_router
@@ -55,11 +56,11 @@ def create_application() -> FastAPI:
     add_security_headers(app)
     app.add_middleware(LoggingMiddleware)
     
-    # Add exception handlers
-    app.add_exception_handler(APIError, api_error_handler)
+    # Add enhanced exception handlers with monitoring
+    app.add_exception_handler(APIError, enhanced_api_error_handler)
     app.add_exception_handler(HTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
-    app.add_exception_handler(Exception, general_exception_handler)
+    app.add_exception_handler(Exception, enhanced_general_exception_handler)
     
     # Include routers
     app.include_router(health_router)
@@ -70,6 +71,7 @@ def create_application() -> FastAPI:
     app.include_router(processing_router)
     app.include_router(ai_router, prefix="/api/v1")
     app.include_router(chat_router)
+    app.include_router(monitoring_router)  # Add monitoring endpoints
     
     # Root endpoint
     @app.get("/", tags=["root"])
